@@ -7,7 +7,7 @@ const connectDB = async () => {
   try {
     logger.info('Connecting to MongoDB…');
     await mongoose.connect(uri);
-    logger.success('MongoDB connected');
+    logger.success(`MongoDB connected @ ${uri.replace(/\/\/.*@/, '//<redacted>@')}`);
     await seed();
   } catch (error) {
     logger.error('MongoDB connection failed', error.message);

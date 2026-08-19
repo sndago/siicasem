@@ -22,7 +22,7 @@ const logger = {
     console.log(`
 ${c.cyan}${c.bold}  ╔══════════════════════════════════════╗
   ║                                      ║
-  ║   ▲  C O N E   B A C K E N D        ║
+  ║   ▲  S I I C A S E M   B A C K E N D ║
   ║                                      ║
   ╚══════════════════════════════════════╝${c.reset}
 
