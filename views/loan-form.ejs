@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Siicasem — Loan Application</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/client.css">
+  <link rel="stylesheet" href="/css/form.css">
+  <style>
+    .loan-summary {
+      background: #f0fdf4; border: 1.5px solid #86efac;
+      border-radius: .75rem; padding: 1rem 1.25rem;
+      margin-bottom: .25rem;
+    }
+    .loan-summary-title {
+      font-size: .8rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: #15803d; margin-bottom: .6rem;
+    }
+    .loan-summary-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: .5rem 1.25rem;
+    }
+    .loan-summary-item { display: flex; flex-direction: column; gap: .15rem; }
+    .loan-summary-label { font-size: .72rem; color: #6b7280; font-weight: 500; }
+    .loan-summary-value { font-size: .95rem; font-weight: 700; color: #1e293b; font-variant-numeric: tabular-nums; }
+    .loan-summary-value.highlight { color: #6366f1; }
+    .loan-active-notice {
+      display: flex; align-items: flex-start; gap: .75rem;
+      padding: .875rem 1rem; border-radius: .625rem;
+      background: #fef9c3; border: 1.5px solid #fbbf24;
+      color: #78350f; font-size: .875rem; line-height: 1.5;
+      margin-bottom: .5rem;
+    }
+    .loan-active-notice svg { flex-shrink: 0; margin-top: .1rem; color: #d97706; }
+    .loan-active-notice strong { display: block; font-weight: 600; color: #78350f; margin-bottom: .2rem; }
+    .rate-tier-wrap {
+      display: grid; grid-template-columns: 1fr 1fr; gap: .75rem;
+    }
+    .rate-tier {
+      border: 1.5px solid #e2e8f0; border-radius: .625rem; padding: .875rem 1rem;
+      background: #fafafa; position: relative;
+    }
+    .rate-tier-badge {
+      position: absolute; top: -.65rem; left: .75rem;
+      font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; padding: .15rem .5rem; border-radius: 99px;
+    }
+    .rate-tier-badge.first { background: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
+    .rate-tier-badge.subsequent { background: #ede9fe; color: #5b21b6; border: 1px solid #a78bfa; }
+    .rate-tier label { font-size: .82rem; font-weight: 600; color: #374151; display: block; margin-bottom: .4rem; }
+    .rate-tier .field-hint { font-size: .72rem; color: #9ca3af; margin-top: .3rem; display: block; }
+    .freq-group {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem;
+    }
+    .freq-group input[type="radio"] { display: none; }
+    .freq-group label {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: .2rem; padding: .75rem .5rem; border: 1.5px solid #e2e8f0;
+      border-radius: .625rem; font-size: .82rem; font-weight: 600;
+      cursor: pointer; transition: all .15s; background: #fff; color: #64748b;
+      text-align: center;
+    }
+    .freq-group label span.freq-period { font-size: .7rem; font-weight: 400; color: #94a3b8; }
+    .freq-group input:checked + label {
+      background: #eef2ff; border-color: #6366f1; color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(99,102,241,.12);
+    }
+    .freq-group label:hover { background: #f8fafc; }
+    .freq-group input:checked + label:hover { background: #eef2ff; }
+    @media (max-width: 520px) {
+      .rate-tier-wrap { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<%
+  const roleLabels = { super_admin: 'Super Admin', admin: 'Admin', teller: 'Teller' };
+  const isTeller   = user.role === 'teller';
+
+  const val = (field, fallback = '') =>
+    loan[field] !== undefined && loan[field] !== null ? loan[field] : fallback;
+
+  const freqSel = (v) => String(val('interestFrequency', 'monthly')) === v ? 'checked' : '';
+%>
+<div class="layout">
+
+  <!-- ── Sidebar ──────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <svg viewBox="0 0 40 40" width="26" height="26" fill="none">
+        <polygon points="20,3 38,37 2,37" fill="#6366f1"/>
+      </svg>
+      <span class="logo-text">SIICASEM</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/dashboard" class="nav-link">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        Dashboard
+      </a>
+      <a href="/clients" class="nav-link active">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        Clients
+      </a>
+      <a href="/transactions" class="nav-link">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <line x1="17" y1="7" x2="7" y2="7"/>
+          <polyline points="14 4 17 7 14 10"/>
+          <line x1="7" y1="17" x2="17" y2="17"/>
+          <polyline points="10 14 7 17 10 20"/>
+        </svg>
+        Transactions
+      </a>
+      <% if (!isTeller) { %>
+      <a href="/requests" class="nav-link">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+        Requests
+      </a>
+      <a href="/users" class="nav-link">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <line x1="23" y1="11" x2="17" y2="11"/><line x1="20" y1="8" x2="20" y2="14"/>
+        </svg>
+        Staff
+      </a>
+      <a href="/logs" class="nav-link">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        Logs
+      </a>
+      <a href="/branches" class="nav-link">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        Branches
+      </a>
+      <% } %>
+      <% if (user.role === 'super_admin') { %>
+      <a href="/archive" class="nav-link">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <polyline points="21 8 21 21 3 21 3 8"/>
+          <rect x="1" y="3" width="22" height="5"/>
+          <line x1="10" y1="12" x2="14" y2="12"/>
+        </svg>
+        Archive
+      </a>
+      <% } %>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar"><%= user.name[0].toUpperCase() %></div>
+      <div class="user-info">
+        <div class="user-name"><%= user.name %></div>
+        <span class="role-badge <%= user.role %>"><%= roleLabels[user.role] || user.role %></span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ──────────────────────────── -->
+  <div class="main-content">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-breadcrumb">
+        <a href="/dashboard" class="back-link">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
+          Dashboard
+        </a>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" class="breadcrumb-sep">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+        <a href="/clients/<%= client._id %>" class="back-link"><%= client.name %></a>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" class="breadcrumb-sep">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+        <span class="breadcrumb-current">Loan Application</span>
+      </div>
+      <a href="/clients/<%= client._id %>" class="btn-cancel">Cancel</a>
+    </header>
+
+    <div class="page-content">
+      <div class="form-page-wrap">
+
+        <!-- Page title -->
+        <div class="form-page-header">
+          <div class="form-page-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="7" width="20" height="14" rx="2"/>
+              <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+              <line x1="12" y1="12" x2="12" y2="16"/>
+              <line x1="10" y1="14" x2="14" y2="14"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="form-page-title">Loan Application</h1>
+            <p class="form-page-sub">
+              Disburse a loan to <strong><%= client.name %></strong> via account
+              <strong><%= account.accountNumber %></strong>
+              (current balance: <strong>₵<%= Number(account.balance).toLocaleString('en-US', { minimumFractionDigits: 2 }) %></strong>).
+            </p>
+          </div>
+        </div>
+
+        <!-- Active loan warning -->
+        <% if (activeLoan) { %>
+        <div class="loan-active-notice">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <div>
+            <strong>Active Loan Exists</strong>
+            This account already has an active loan of
+            ₵<%= Number(activeLoan.principal).toLocaleString('en-US', { minimumFractionDigits: 2 }) %>
+            (<%= activeLoan.initialRate %>% first period, <%= activeLoan.subsequentRate %>% thereafter).
+            The existing loan must be closed before a new one can be applied.
+          </div>
+        </div>
+        <% } %>
+
+        <!-- Validation errors -->
+        <% if (errors && errors.length) { %>
+        <div class="form-errors">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" class="form-errors-icon">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r=".5" fill="currentColor"/>
+          </svg>
+          <div>
+            <strong>Please fix the following:</strong>
+            <ul>
+              <% errors.forEach(e => { %><li><%= e %></li><% }) %>
+            </ul>
+          </div>
+        </div>
+        <% } %>
+
+        <!-- Form -->
+        <form
+          action="/clients/<%= client._id %>/accounts/<%= account._id %>/loans"
+          method="POST"
+          class="client-form"
+          novalidate
+          id="loanForm"
+        >
+
+          <!-- Section: Loan Terms -->
+          <div class="form-section">
+            <div class="form-section-label">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5">
+                <line x1="12" y1="1" x2="12" y2="23"/>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+              Loan Terms
+            </div>
+            <div class="form-grid">
+
+              <!-- Principal -->
+              <div class="form-group">
+                <label for="principal">Principal Amount <span class="req">*</span></label>
+                <div class="input-with-icon">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <line x1="12" y1="1" x2="12" y2="23"/>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                  </svg>
+                  <input type="number" id="principal" name="principal"
+                         value="<%= val('principal') %>"
+                         min="0.01" step="0.01"
+                         placeholder="0.00"
+                         style="font-variant-numeric: tabular-nums;"
+                         oninput="recalc()" required>
+                </div>
+                <span class="field-hint">Total loan amount to be disbursed.</span>
+              </div>
+
+              <!-- Amortization -->
+              <div class="form-group">
+                <label for="amortization">Amortization (months) <span class="req">*</span></label>
+                <div class="input-with-icon">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  <input type="number" id="amortization" name="amortization"
+                         value="<%= val('amortization') %>"
+                         min="1" step="1"
+                         placeholder="e.g. 12"
+                         style="font-variant-numeric: tabular-nums;"
+                         oninput="recalc()" required>
+                </div>
+                <span class="field-hint">Loan term in months.</span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Section: Interest Rates -->
+          <div class="form-section">
+            <div class="form-section-label">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5">
+                <line x1="19" y1="5" x2="5" y2="19"/>
+                <circle cx="6.5" cy="6.5" r="2.5"/>
+                <circle cx="17.5" cy="17.5" r="2.5"/>
+              </svg>
+              Interest Rates
+            </div>
+            <div class="form-grid">
+              <div class="form-group form-col-full">
+                <div class="rate-tier-wrap">
+
+                  <!-- Initial rate -->
+                  <div class="rate-tier">
+                    <span class="rate-tier-badge first">1st period</span>
+                    <label for="initialRate">Rate (%) <span class="req">*</span></label>
+                    <div class="input-with-icon">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <line x1="19" y1="5" x2="5" y2="19"/>
+                        <circle cx="6.5" cy="6.5" r="2.5"/>
+                        <circle cx="17.5" cy="17.5" r="2.5"/>
+                      </svg>
+                      <input type="number" id="initialRate" name="initialRate"
+                             value="<%= val('initialRate', 10) %>"
+                             min="0" step="0.01"
+                             placeholder="e.g. 10"
+                             style="font-variant-numeric: tabular-nums;"
+                             oninput="recalc()" required>
+                    </div>
+                    <span class="field-hint">Charged once on the first interest date.</span>
+                  </div>
+
+                  <!-- Subsequent rate -->
+                  <div class="rate-tier">
+                    <span class="rate-tier-badge subsequent">subsequent</span>
+                    <label for="subsequentRate">Rate (%) <span class="req">*</span></label>
+                    <div class="input-with-icon">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <line x1="19" y1="5" x2="5" y2="19"/>
+                        <circle cx="6.5" cy="6.5" r="2.5"/>
+                        <circle cx="17.5" cy="17.5" r="2.5"/>
+                      </svg>
+                      <input type="number" id="subsequentRate" name="subsequentRate"
+                             value="<%= val('subsequentRate', 5) %>"
+                             min="0" step="0.01"
+                             placeholder="e.g. 5"
+                             style="font-variant-numeric: tabular-nums;"
+                             oninput="recalc()" required>
+                    </div>
+                    <span class="field-hint">Charged every period after the first.</span>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Interest Frequency -->
+          <div class="form-section">
+            <div class="form-section-label">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5">
+                <polyline points="23 4 23 10 17 10"/>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+              Interest Frequency
+            </div>
+            <div class="form-grid">
+              <div class="form-group form-col-full">
+                <label>How often should interest be charged? <span class="req">*</span></label>
+                <div class="freq-group">
+                  <input type="radio" id="freq-monthly"   name="interestFrequency" value="monthly"   <%= freqSel('monthly')   %> onchange="recalc()">
+                  <label for="freq-monthly">
+                    Monthly
+                    <span class="freq-period">Every month</span>
+                  </label>
+                  <input type="radio" id="freq-quarterly" name="interestFrequency" value="quarterly" <%= freqSel('quarterly') %> onchange="recalc()">
+                  <label for="freq-quarterly">
+                    Quarterly
+                    <span class="freq-period">Every 3 months</span>
+                  </label>
+                  <input type="radio" id="freq-annually"  name="interestFrequency" value="annually"  <%= freqSel('annually')  %> onchange="recalc()">
+                  <label for="freq-annually">
+                    Annually
+                    <span class="freq-period">Once a year</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Auto-calculated Summary -->
+          <div class="form-section" id="summarySection" style="display:none">
+            <div class="form-section-label">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+              Loan Summary
+            </div>
+            <div class="loan-summary">
+              <div class="loan-summary-title">Auto-calculated estimate (no repayments assumed)</div>
+              <div class="loan-summary-grid">
+                <div class="loan-summary-item">
+                  <span class="loan-summary-label">Principal</span>
+                  <span class="loan-summary-value" id="sumPrincipal">—</span>
+                </div>
+                <div class="loan-summary-item">
+                  <span class="loan-summary-label">1st period interest</span>
+                  <span class="loan-summary-value" id="sumFirstInterest">—</span>
+                </div>
+                <div class="loan-summary-item">
+                  <span class="loan-summary-label">Subsequent per period</span>
+                  <span class="loan-summary-value" id="sumSubsInterest">—</span>
+                </div>
+                <div class="loan-summary-item">
+                  <span class="loan-summary-label">Total interest</span>
+                  <span class="loan-summary-value" id="sumTotalInterest">—</span>
+                </div>
+                <div class="loan-summary-item">
+                  <span class="loan-summary-label">Total repayable</span>
+                  <span class="loan-summary-value highlight" id="sumTotal">—</span>
+                </div>
+                <div class="loan-summary-item">
+                  <span class="loan-summary-label">Loan term</span>
+                  <span class="loan-summary-value" id="sumTerm">—</span>
+                </div>
+                <div class="loan-summary-item">
+                  <span class="loan-summary-label">1st interest date</span>
+                  <span class="loan-summary-value" id="sumNextDate">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="form-actions">
+            <a href="/clients/<%= client._id %>" class="btn-cancel-form">Cancel</a>
+            <button type="submit" class="btn-save" id="submitBtn" <%= activeLoan ? 'disabled style="opacity:.5;cursor:not-allowed"' : '' %>>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="20" height="14" rx="2"/>
+                <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+              </svg>
+              Disburse Loan
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const fmt = (n) => '₵' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const FREQ_MONTHS = { monthly: 1, quarterly: 3, annually: 12 };
+
+  function getFreq() {
+    const el = document.querySelector('input[name="interestFrequency"]:checked');
+    return el ? el.value : null;
+  }
+
+  function addMonths(date, n) {
+    const d = new Date(date);
+    d.setMonth(d.getMonth() + n);
+    return d;
+  }
+
+  function recalc() {
+    const principal      = parseFloat(document.getElementById('principal').value);
+    const initialRate    = parseFloat(document.getElementById('initialRate').value);
+    const subsequentRate = parseFloat(document.getElementById('subsequentRate').value);
+    const amortization   = parseInt(document.getElementById('amortization').value, 10);
+    const freq           = getFreq();
+    const section        = document.getElementById('summarySection');
+
+    if (!principal || isNaN(initialRate) || isNaN(subsequentRate) || !amortization || !freq
+        || principal <= 0 || initialRate < 0 || subsequentRate < 0 || amortization < 1) {
+      section.style.display = 'none';
+      return;
+    }
+
+    const monthsPerPeriod = FREQ_MONTHS[freq] || 1;
+    const totalPeriods    = Math.max(1, Math.ceil(amortization / monthsPerPeriod));
+
+    // Period 1: initialRate % of principal
+    const firstInterest = principal * initialRate / 100;
+    // Periods 2+: subsequentRate % of principal each (simplified — no repayment assumed)
+    const subsInterest    = principal * subsequentRate / 100;
+    const subsCount       = Math.max(0, totalPeriods - 1);
+    const totalInterest   = firstInterest + subsInterest * subsCount;
+    const totalRepayable  = principal + totalInterest;
+
+    const nextDate    = addMonths(new Date(), monthsPerPeriod);
+    const nextDateStr = nextDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    const yrs = Math.floor(amortization / 12);
+    const mos = amortization % 12;
+    const termStr = [yrs ? yrs + ' yr' : '', mos ? mos + ' mo' : ''].filter(Boolean).join(' ') || amortization + ' mo';
+
+    document.getElementById('sumPrincipal').textContent    = fmt(principal);
+    document.getElementById('sumFirstInterest').textContent = fmt(firstInterest);
+    document.getElementById('sumSubsInterest').textContent  = fmt(subsInterest);
+    document.getElementById('sumTotalInterest').textContent = fmt(totalInterest);
+    document.getElementById('sumTotal').textContent        = fmt(totalRepayable);
+    document.getElementById('sumTerm').textContent         = termStr;
+    document.getElementById('sumNextDate').textContent     = nextDateStr;
+
+    section.style.display = '';
+  }
+
+  document.getElementById('loanForm').addEventListener('submit', function () {
+    var btn = document.getElementById('submitBtn');
+    if (!btn.disabled) { btn.disabled = true; btn.style.opacity = '0.6'; btn.style.cursor = 'not-allowed'; }
+  });
+
+  recalc();
+</script>
+
+<!-- ── Mobile: backdrop + drawer toggle ─────────────── -->
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+<!-- ── Mobile: bottom navigation bar ───────────────── -->
+<nav class="mobile-nav">
+  <a href="/dashboard" class="mobile-nav-item" data-path="/dashboard">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75">
+      <rect x="3" y="3" width="7" height="7" rx="1"/>
+      <rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/>
+      <rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+    Home
+  </a>
+  <a href="/clients" class="mobile-nav-item active" data-path="/clients">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+    </svg>
+    Clients
+  </a>
+  <a href="/transactions" class="mobile-nav-item" data-path="/transactions">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75">
+      <line x1="17" y1="7" x2="7" y2="7"/>
+      <polyline points="14 4 17 7 14 10"/>
+      <line x1="7" y1="17" x2="17" y2="17"/>
+      <polyline points="10 14 7 17 10 20"/>
+    </svg>
+    Txns
+  </a>
+  <button class="mobile-nav-item" onclick="openSidebar()">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+    Menu
+  </button>
+</nav>
+
+<script>
+  function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebarBackdrop').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarBackdrop').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+</script>
+<script src="/js/modal.js"></script>
+</body>
+</html>
