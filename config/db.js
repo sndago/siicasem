@@ -3,7 +3,7 @@ const logger = require('./logger');
 const seed = require('./seed');
 
 const connectDB = async () => {
-  const uri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/siicasem';
+  const uri = process.env.MONGO_URI;
   try {
     logger.info('Connecting to MongoDB…');
     await mongoose.connect(uri);
