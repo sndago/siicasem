@@ -1,6 +1,8 @@
 const User        = require('../models/User');
 const Client      = require('../models/Client');
+const Account     = require('../models/Account');
 const Transaction = require('../models/Transaction');
+const Branch      = require('../models/Branch');
 const logger      = require('./logger');
 
 /* ── Transaction generator ───────────────────── */
@@ -44,7 +46,7 @@ const generateStaffId = async () => {
   throw new Error('Could not generate a unique staff ID.');
 };
 
-function makeTransactions(clientId, targetBalance) {
+function makeTransactions(clientId, accountId, targetBalance) {
   const now  = new Date();
   const N    = 18 + Math.floor(Math.random() * 10); // 18–27 transactions
   let balance = targetBalance * (0.38 + Math.random() * 0.2); // start 38–58 % of current
@@ -77,6 +79,7 @@ function makeTransactions(clientId, targetBalance) {
 
     txns.push({
       client:       clientId,
+      account:      accountId,
       type,
       amount:       parseFloat(amount.toFixed(2)),
       description:  tpl.description,
@@ -90,31 +93,38 @@ function makeTransactions(clientId, targetBalance) {
     });
   }
 
-  // Final correcting transaction to land on targetBalance
+  // Final correcting transaction to land on targetBalance — dated after every
+  // other transaction so it's always the chronologically-last entry
   const diff = parseFloat((targetBalance - balance).toFixed(2));
   if (Math.abs(diff) >= 0.01) {
     const type = diff > 0 ? 'credit' : 'debit';
+    const lastDate = txns.length ? txns[txns.length - 1].date.getTime() : now.getTime();
+    const correctingDate = new Date(Math.max(lastDate, now.getTime()) + 60 * 1000);
     txns.push({
       client:       clientId,
+      account:      accountId,
       type,
       amount:       Math.abs(diff),
       description:  type === 'credit' ? 'Salary Deposit' : 'Account Settlement',
       category:     type === 'credit' ? 'deposit' : 'payment',
-      reference:    makeRef(now),
+      reference:    makeRef(correctingDate),
       balanceAfter: parseFloat(targetBalance.toFixed(2)),
       status:       'completed',
-      date:         new Date(now.setHours(10, 0, 0, 0)),
+      date:         correctingDate,
     });
   }
 
   return txns;
 }
 
-async function seedTransactions(clients) {
+/* accounts: [{ _id, client, targetBalance }] — inserts transaction history and
+   leaves each account's `balance` matching the last transaction's balanceAfter */
+async function seedTransactions(accounts) {
   const all = [];
-  for (const c of clients) all.push(...makeTransactions(c._id, c.balance));
+  for (const a of accounts) all.push(...makeTransactions(a.client, a._id, a.targetBalance));
   await Transaction.insertMany(all);
-  logger.success(`Seeded ${all.length} transactions across ${clients.length} clients`);
+  await Promise.all(accounts.map((a) => Account.updateOne({ _id: a._id }, { balance: a.targetBalance })));
+  logger.success(`Seeded ${all.length} transactions across ${accounts.length} accounts`);
 }
 
 /* ── Main seed ───────────────────────────────── */
@@ -135,28 +145,52 @@ const seed = async () => {
 
     const teller = users[2];
 
-    const clients = await Client.create([
-      { name: 'Alice Johnson', email: 'alice@clients.com', phone: '555-0101', accountNumber: 'ACC-001', accountType: 'savings',  balance: 12500.00, status: 'active',    assignedTeller: teller._id },
-      { name: 'Bob Smith',     email: 'bob@clients.com',   phone: '555-0102', accountNumber: 'ACC-002', accountType: 'checking', balance:  4300.50, status: 'active',    assignedTeller: teller._id },
-      { name: 'Carol White',   email: 'carol@clients.com', phone: '555-0103', accountNumber: 'ACC-003', accountType: 'business', balance: 89750.00, status: 'active'                              },
-      { name: 'David Brown',   email: 'david@clients.com', phone: '555-0104', accountNumber: 'ACC-004', accountType: 'savings',  balance:  2100.00, status: 'inactive'                            },
-      { name: 'Eva Martinez',  email: 'eva@clients.com',   phone: '555-0105', accountNumber: 'ACC-005', accountType: 'checking', balance:  6800.25, status: 'active'                              },
-      { name: 'Frank Lee',     email: 'frank@clients.com', phone: '555-0106', accountNumber: 'ACC-006', accountType: 'savings',  balance: 15000.00, status: 'active',    assignedTeller: teller._id },
-    ]);
+    let branch = await Branch.findOne();
+    if (!branch) branch = await Branch.create({ name: 'Main Branch', code: '001' });
 
-    await seedTransactions(clients);
+    const clientSpecs = [
+      { name: 'Alice Johnson', email: 'alice@clients.com', phone: '0244123401', accountType: 'savings',  balance: 12500.00, status: 'active',    assignedTeller: teller._id },
+      { name: 'Bob Smith',     email: 'bob@clients.com',   phone: '0244123402', accountType: 'checking', balance:  4300.50, status: 'active',    assignedTeller: teller._id },
+      { name: 'Carol White',   email: 'carol@clients.com', phone: '0244123403', accountType: 'business', balance: 89750.00, status: 'active'                              },
+      { name: 'David Brown',   email: 'david@clients.com', phone: '0244123404', accountType: 'savings',  balance:  2100.00, status: 'inactive'                            },
+      { name: 'Eva Martinez',  email: 'eva@clients.com',   phone: '0244123405', accountType: 'checking', balance:  6800.25, status: 'active'                              },
+      { name: 'Frank Lee',     email: 'frank@clients.com', phone: '0244123406', accountType: 'savings',  balance: 15000.00, status: 'active',    assignedTeller: teller._id },
+    ];
+
+    const accounts = [];
+    for (const [i, spec] of clientSpecs.entries()) {
+      const client = await Client.create({
+        name: spec.name, email: spec.email, phone: spec.phone,
+        status: spec.status, assignedTeller: spec.assignedTeller,
+        homeBranch: branch._id, approvalStatus: 'approved',
+      });
+      const account = await Account.create({
+        client: client._id,
+        accountNumber: `${branch.code}${String(1001 + i)}`,
+        accountType: spec.accountType,
+        balance: 0,
+        status: spec.status,
+        approvalStatus: 'approved',
+      });
+      accounts.push({ _id: account._id, client: client._id, targetBalance: spec.balance });
+    }
+
+    await seedTransactions(accounts);
 
     logger.success('Seed complete');
     logger.info(`  ${staffIds[0]}  /  Admin@1234  (Super Admin — ${users[0].email})`);
     logger.info(`  ${staffIds[1]}  /  Admin@1234  (Admin — ${users[1].email})`);
     logger.info(`  ${staffIds[2]}  /  Teller@1234 (Teller — ${users[2].email})\n`);
   } else {
-    // Patch: seed transactions if they are missing from an existing database
-    const txnCount = await Transaction.countDocuments();
-    if (txnCount === 0) {
-      logger.info('Seeding transactions for existing clients…');
-      const clients = await Client.find().lean();
-      await seedTransactions(clients);
+    // Patch: seed transactions for any account that doesn't have any yet
+    const accountsWithoutTxns = await Account.aggregate([
+      { $lookup: { from: 'transactions', localField: '_id', foreignField: 'account', as: 'txns' } },
+      { $match: { txns: { $size: 0 } } },
+      { $project: { client: 1, balance: 1 } },
+    ]);
+    if (accountsWithoutTxns.length) {
+      logger.info(`Seeding transactions for ${accountsWithoutTxns.length} account(s) without any…`);
+      await seedTransactions(accountsWithoutTxns.map((a) => ({ _id: a._id, client: a.client, targetBalance: a.balance || 0 })));
     }
   }
 };
