@@ -17,7 +17,8 @@ const { newTransactionForm, createTransaction,
         approveEditRequest, rejectEditRequest }                        = require('../controllers/transactionController');
 const { listUsers, userDetail, newUserForm, createUser,
         editUserForm, updateUser,
-        toggleUserActive, deleteUser, uploadUserPhoto }                = require('../controllers/userController');
+        toggleUserActive, deleteUser, uploadUserPhoto,
+        resetUserPassword }                                            = require('../controllers/userController');
 const { listLogs }                                                     = require('../controllers/logController');
 const { listArchive, restoreClient,
         restoreTransaction, restoreUser }                              = require('../controllers/archiveController');
@@ -80,6 +81,7 @@ router.get( '/users/:id/edit',     requireAdmin,      editUserForm);
 router.post('/users/:id',          requireAdmin,      updateUser);
 router.post('/users/:id/toggle',   requireAdmin,      toggleUserActive);
 router.post('/users/:id/photo',    requireAdmin,      uploadUserPhoto);
+router.post('/users/:id/reset-password', requireSuperAdmin, resetUserPassword);
 router.post('/users/:id/delete',   requireSuperAdmin, deleteUser);
 
 // Branch management — admin and super_admin only

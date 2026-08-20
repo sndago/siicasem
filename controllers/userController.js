@@ -297,6 +297,35 @@ const updateUser = async (req, res) => {
   }
 };
 
+/* ── POST /users/:id/reset-password ─────────────── (super_admin only) */
+const resetUserPassword = async (req, res) => {
+  try {
+    const roles    = manageableRoles(req.session.user.role);
+    const password = (req.body.password || '').trim();
+
+    if (password.length < 6) {
+      req.session.flash = { type: 'error', message: 'Password must be at least 6 characters.' };
+      return res.redirect(303, `/users/${req.params.id}`);
+    }
+
+    const target = await User.findOne({ _id: req.params.id, role: { $in: roles } });
+    if (!target) {
+      req.session.flash = { type: 'error', message: 'User not found.' };
+      return res.redirect(303, '/users');
+    }
+
+    target.password = password;
+    await target.save();
+
+    await logActivity(req, 'USER_PASSWORD_RESET', 'user', `Reset password for ${target.name}`, { role: target.role }, target._id);
+    req.session.flash = { type: 'success', message: `Password reset for ${target.name}.` };
+    res.redirect(303, `/users/${target._id}`);
+  } catch (err) {
+    req.session.flash = { type: 'error', message: err.message };
+    res.redirect(303, `/users/${req.params.id}`);
+  }
+};
+
 /* ── POST /users/:id/toggle ─────────────────────── */
 const toggleUserActive = async (req, res) => {
   try {
@@ -376,4 +405,4 @@ const uploadUserPhoto = (req, res) => {
   });
 };
 
-module.exports = { listUsers, userDetail, newUserForm, createUser, editUserForm, updateUser, toggleUserActive, deleteUser, uploadUserPhoto };
+module.exports = { listUsers, userDetail, newUserForm, createUser, editUserForm, updateUser, toggleUserActive, deleteUser, uploadUserPhoto, resetUserPassword };

@@ -95,6 +95,7 @@
     USER_UPDATE:  { label: 'User Updated',   cls: 'user-mgmt' },
     USER_TOGGLE:  { label: 'User Toggled',   cls: 'user-mgmt' },
     USER_DELETE:  { label: 'User Deleted',   cls: 'danger' },
+    USER_PASSWORD_RESET: { label: 'Password Reset', cls: 'user-mgmt' },
   };
 
   const buildQuery = (overrides = {}) => {
@@ -284,6 +285,7 @@
                   <option value="USER_UPDATE" <%= filters.action === 'USER_UPDATE' ? 'selected' : '' %>>User Updated</option>
                   <option value="USER_TOGGLE" <%= filters.action === 'USER_TOGGLE' ? 'selected' : '' %>>User Toggled</option>
                   <option value="USER_DELETE" <%= filters.action === 'USER_DELETE' ? 'selected' : '' %>>User Deleted</option>
+                  <option value="USER_PASSWORD_RESET" <%= filters.action === 'USER_PASSWORD_RESET' ? 'selected' : '' %>>Password Reset</option>
                 </optgroup>
               </select>
             </div>
