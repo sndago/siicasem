@@ -36,6 +36,14 @@ const DEBITS = [
 const pick  = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const round = (n, step = 5) => Math.round(n / step) * step;
 
+const generateStaffId = async () => {
+  for (let i = 0; i < 20; i++) {
+    const id = String(Math.floor(100000 + Math.random() * 900000));
+    if (!await User.exists({ staffId: id })) return id;
+  }
+  throw new Error('Could not generate a unique staff ID.');
+};
+
 function makeTransactions(clientId, targetBalance) {
   const now  = new Date();
   const N    = 18 + Math.floor(Math.random() * 10); // 18–27 transactions
@@ -116,10 +124,13 @@ const seed = async () => {
   if (userCount === 0) {
     logger.info('No users found — seeding default accounts…');
 
+    const staffIds = [];
+    for (let i = 0; i < 3; i++) staffIds.push(await generateStaffId());
+
     const users = await User.create([
-      { name: 'Super Admin', email: 'superadmin@siicasem.app', password: 'Admin@1234',  role: 'super_admin' },
-      { name: 'Jane Admin',  email: 'admin@siicasem.app',      password: 'Admin@1234',  role: 'admin'       },
-      { name: 'Tom Teller',  email: 'teller@siicasem.app',     password: 'Teller@1234', role: 'teller'      },
+      { name: 'Super Admin', email: 'superadmin@siicasem.app', password: 'Admin@1234',  role: 'super_admin', staffId: staffIds[0] },
+      { name: 'Jane Admin',  email: 'admin@siicasem.app',      password: 'Admin@1234',  role: 'admin',       staffId: staffIds[1] },
+      { name: 'Tom Teller',  email: 'teller@siicasem.app',     password: 'Teller@1234', role: 'teller',      staffId: staffIds[2] },
     ]);
 
     const teller = users[2];
@@ -136,9 +147,9 @@ const seed = async () => {
     await seedTransactions(clients);
 
     logger.success('Seed complete');
-    logger.info('  superadmin@siicasem.app  /  Admin@1234  (Super Admin)');
-    logger.info('  admin@siicasem.app       /  Admin@1234  (Admin)');
-    logger.info('  teller@siicasem.app      /  Teller@1234 (Teller)\n');
+    logger.info(`  ${staffIds[0]}  /  Admin@1234  (Super Admin — ${users[0].email})`);
+    logger.info(`  ${staffIds[1]}  /  Admin@1234  (Admin — ${users[1].email})`);
+    logger.info(`  ${staffIds[2]}  /  Teller@1234 (Teller — ${users[2].email})\n`);
   } else {
     // Patch: seed transactions if they are missing from an existing database
     const txnCount = await Transaction.countDocuments();
