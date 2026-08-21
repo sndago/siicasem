@@ -11,14 +11,6 @@
   <link rel="stylesheet" href="/css/client.css">
   <link rel="stylesheet" href="/css/form.css">
   <style>
-    .type-indicator {
-      display: flex; align-items: center; gap: .5rem;
-      padding: .7rem 1rem; border: 1.5px solid; border-radius: .625rem;
-      font-size: .9rem; font-weight: 600;
-    }
-    .type-indicator.type-credit { background: #ecfdf5; border-color: #059669; color: #059669; }
-    .type-indicator.type-debit  { background: #fff1f2; border-color: #e11d48; color: #e11d48; }
-
     .request-notice {
       display: none;
       align-items: flex-start; gap: .75rem;
@@ -317,12 +309,6 @@
                 </div>
               </div>
 
-              <!-- Type (auto-detected from category) -->
-              <div class="form-group form-col-full">
-                <label>Type</label>
-                <div class="type-indicator" id="typeIndicator"></div>
-              </div>
-
               <!-- Description -->
               <div class="form-group form-col-full">
                 <label for="description">Description <span class="req">*</span></label>
@@ -418,27 +404,6 @@
       );
     }
   }
-
-  var CATEGORY_TYPE = {
-    deposit: 'credit', payment: 'credit', interest: 'credit',
-    withdrawal: 'debit', loan: 'debit', transfer: 'debit', fee: 'debit',
-  };
-  var CREDIT_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>';
-  var DEBIT_ICON  = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>';
-
-  function updateTypeIndicator() {
-    var categoryEl = document.getElementById('category');
-    var indicator  = document.getElementById('typeIndicator');
-    if (!categoryEl || !indicator) return;
-    var isCredit = CATEGORY_TYPE[categoryEl.value] === 'credit';
-    indicator.className = 'type-indicator ' + (isCredit ? 'type-credit' : 'type-debit');
-    indicator.innerHTML = (isCredit ? CREDIT_ICON : DEBIT_ICON)
-      + (isCredit ? 'Money In (Credit)' : 'Money Out (Debit)')
-      + '<span style="font-weight:500;margin-left:auto;font-size:.8rem;opacity:.75">auto-detected from category</span>';
-  }
-
-  document.getElementById('category').addEventListener('change', updateTypeIndicator);
-  updateTypeIndicator();
 </script>
       </div>
     </div>
