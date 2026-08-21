@@ -33,8 +33,11 @@ const generateStaffId = async () => {
 };
 
 /* Roles a given actor is allowed to create / manage */
-const manageableRoles = (actorRole) =>
-  actorRole === 'super_admin' ? ['admin', 'teller'] : ['teller'];
+const manageableRoles = (actorRole) => {
+  if (actorRole === 'super_admin') return ['admin', 'teller'];
+  if (actorRole === 'admin') return ['teller'];
+  return [];
+};
 
 const buildReferees = (body) => [
   { name: body.ref1Name?.trim(), phone: body.ref1Phone?.trim(), email: body.ref1Email?.trim() || undefined, relationship: body.ref1Relationship?.trim() || undefined },
@@ -67,7 +70,7 @@ const validate = (body, isNew) => {
 const listUsers = async (req, res) => {
   try {
     const roles   = manageableRoles(req.session.user.role);
-    const users   = await User.find({ role: { $in: roles } }).sort({ role: 1, name: 1 }).lean();
+    const users   = await User.find({}).sort({ role: 1, name: 1 }).lean();
 
     // Attach assigned-client counts for tellers
     const tellerIds = users.filter(u => u.role === 'teller').map(u => u._id);
@@ -88,13 +91,15 @@ const listUsers = async (req, res) => {
 const userDetail = async (req, res) => {
   try {
     const roles      = manageableRoles(req.session.user.role);
-    const targetUser = await User.findOne({ _id: req.params.id, role: { $in: roles } })
+    const targetUser = await User.findOne({ _id: req.params.id })
       .populate('branch', 'name code').lean();
 
     if (!targetUser) {
       req.session.flash = { type: 'error', message: 'Staff member not found.' };
       return res.redirect(303, '/users');
     }
+
+    const canManage = roles.includes(targetUser.role);
 
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const uid        = targetUser._id;
@@ -128,6 +133,7 @@ const userDetail = async (req, res) => {
     res.render('user-detail', {
       user: req.session.user,
       targetUser,
+      canManage,
       assignedClients,
       txnsProcessed,
       txnsApprovedCount,

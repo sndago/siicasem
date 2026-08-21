@@ -72,12 +72,14 @@
         </svg>
         Transactions
       </a>
+      <% if (['admin','super_admin'].includes(user.role)) { %>
       <a href="/requests" class="nav-link">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
         </svg>
         Requests
       </a>
+      <% } %>
       <a href="/users" class="nav-link active">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -86,6 +88,7 @@
         </svg>
         Staff
       </a>
+      <% if (['admin','super_admin'].includes(user.role)) { %>
       <a href="/logs" class="nav-link">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -101,6 +104,7 @@
         </svg>
         Branches
       </a>
+      <% } %>
       <% if (isSuperAdmin) { %>
       <a href="/archive" class="nav-link">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -155,12 +159,14 @@
 
       <!-- ── Profile card ──────────────────────── -->
       <div class="ud-profile-card">
-        <div class="ud-avatar" id="udAvatar" title="Click to upload photo" onclick="document.getElementById('udPhotoInput').click()">
+        <div class="ud-avatar" id="udAvatar"
+             <% if (canManage) { %>title="Click to upload photo" onclick="document.getElementById('udPhotoInput').click()"<% } else { %>style="cursor:default"<% } %>>
           <% if (targetUser.photo) { %>
           <img src="<%= targetUser.photo %>" alt="<%= targetUser.name %>" class="ud-avatar-img" id="udAvatarImg">
           <% } else { %>
           <span id="udAvatarInitials" style="font-size:1.375rem;font-weight:700;color:<%= targetUser.isActive ? '#fff' : '#94a3b8' %>;letter-spacing:-.02em"><%= initials %></span>
           <% } %>
+          <% if (canManage) { %>
           <div class="ud-avatar-cam" id="udAvatarCam">
             <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
@@ -169,6 +175,7 @@
           </div>
           <input type="file" id="udPhotoInput" accept="image/jpeg,image/png,image/webp,image/gif"
                  style="display:none" onchange="handleUserPhotoUpload(this)">
+          <% } %>
         </div>
         <div class="ud-profile-body">
           <div class="ud-profile-top">
@@ -183,6 +190,7 @@
                 <% } %>
               </div>
             </div>
+            <% if (canManage) { %>
             <div class="ud-actions">
               <a href="/users/<%= targetUser._id %>/edit" class="ud-btn ud-btn-default">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
@@ -219,6 +227,7 @@
                 </button>
               </form>
             </div>
+            <% } %>
           </div>
           <div class="hero-meta">
             <% if (targetUser.staffId) { %>
@@ -378,7 +387,7 @@
       </div>
       <% } %>
 
-      <% if (isSuperAdmin) { %>
+      <% if (isSuperAdmin && canManage) { %>
       <div class="rp-backdrop" id="rpBackdrop">
         <div class="rp-box" role="dialog" aria-modal="true" aria-labelledby="rpTitle">
           <h3 id="rpTitle">Reset Password</h3>

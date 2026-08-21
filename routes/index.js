@@ -72,10 +72,11 @@ router.get( '/clients/:clientId/transactions/:txnId/edit',      requireAuth,    
 router.post('/clients/:clientId/transactions/:txnId',           requireAuth,       updateTransaction);
 router.post('/clients/:clientId/transactions/:txnId/delete',    requireSuperAdmin, deleteTransaction);
 
-// Staff management — admin manages tellers; super_admin manages admins + tellers
-router.get( '/users',              requireAdmin,      listUsers);
+// Staff management — everyone can view the staff list/detail; admin manages
+// tellers, super_admin manages admins + tellers
+router.get( '/users',              requireAuth,       listUsers);
 router.get( '/users/new',          requireAdmin,      newUserForm);
-router.get( '/users/:id',          requireAdmin,      userDetail);
+router.get( '/users/:id',          requireAuth,       userDetail);
 router.post('/users',              requireAdmin,      createUser);
 router.get( '/users/:id/edit',     requireAdmin,      editUserForm);
 router.post('/users/:id',          requireAdmin,      updateUser);

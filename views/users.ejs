@@ -51,12 +51,14 @@
         </svg>
         Transactions
       </a>
+      <% if (['admin','super_admin'].includes(user.role)) { %>
       <a href="/requests" class="nav-link">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
         </svg>
         Requests
       </a>
+      <% } %>
       <a href="/users" class="nav-link active">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -65,6 +67,7 @@
         </svg>
         Staff
       </a>
+      <% if (['admin','super_admin'].includes(user.role)) { %>
       <a href="/logs" class="nav-link">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -80,6 +83,7 @@
         </svg>
         Branches
       </a>
+      <% } %>
       <% if (user.role === 'super_admin') { %>
       <a href="/archive" class="nav-link">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -116,12 +120,14 @@
         <span class="breadcrumb-current">Staff</span>
       </div>
       <div style="display:flex;gap:.75rem;align-items:center">
+        <% if (manageableRoles.length) { %>
         <a href="/users/new" class="btn-new-client">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
           New <%= isSuperAdmin ? 'Staff' : 'Teller' %>
         </a>
+        <% } %>
         <form action="/logout" method="POST">
           <button type="submit" class="btn-logout">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -226,6 +232,7 @@
                   <div class="txn-date"><%= fmtDate(u.createdAt) %></div>
                 </td>
                 <td class="txn-actions-cell">
+                  <% if (manageableRoles.includes(u.role)) { %>
                   <div class="txn-row-actions">
                     <a href="/users/<%= u._id %>/edit" class="btn-txn-edit" title="Edit">
                       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
@@ -269,6 +276,9 @@
                     </form>
                     <% } %>
                   </div>
+                  <% } else { %>
+                  <span style="color:#94a3b8;font-size:.8rem">View only</span>
+                  <% } %>
                 </td>
               </tr>
               <% }) %>
