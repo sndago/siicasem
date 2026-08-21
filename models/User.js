@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const titleCase = require('../utils/titleCase');
 
 const userSchema = new mongoose.Schema({
-  name:     { type: String, required: true, trim: true },
+  name:     { type: String, required: true, trim: true, set: titleCase },
   email:    { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
   phone:     { type: String, match: [/^0\d{9}$/, 'Phone must be a 10-digit number starting with 0 (e.g. 0553676107).'] },

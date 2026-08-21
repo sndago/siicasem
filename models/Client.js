@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
+const titleCase = require('../utils/titleCase');
 require('./Branch');
 
 const clientSchema = new mongoose.Schema({
-  name:           { type: String, required: true, trim: true },
+  name:           { type: String, required: true, trim: true, set: titleCase },
   email:          { type: String, trim: true },
   phone:          { type: String, required: true, match: [/^0\d{9}$/, 'Phone must be a 10-digit number starting with 0 (e.g. 0553676107).'] },
   status:          { type: String, enum: ['active', 'inactive', 'suspended'], default: 'active' },
