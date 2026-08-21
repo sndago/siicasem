@@ -6,14 +6,24 @@ const logActivity = require('../utils/logActivity');
 const { sendSms } = require('../utils/smsService');
 
 const CATEGORIES          = ['deposit', 'withdrawal', 'transfer', 'payment', 'fee', 'interest', 'loan'];
-const TYPES               = ['credit', 'debit'];
 const STATUSES            = ['completed', 'pending', 'failed'];
 const APPROVAL_CATEGORIES = ['withdrawal', 'loan', 'transfer'];
 
+// Type is derived from category, not user-selected — money in vs. money out
+// is a property of what the transaction is, not a separate free choice.
+const CATEGORY_TYPE = {
+  deposit:    'credit',
+  payment:    'credit',
+  interest:   'credit',
+  withdrawal: 'debit',
+  loan:       'debit',
+  transfer:   'debit',
+  fee:        'debit',
+};
+const typeForCategory = (category) => CATEGORY_TYPE[category];
+
 const validate = (body, isTellerRequest = false) => {
   const errors = [];
-  if (!TYPES.includes(body.type))
-    errors.push('Transaction type must be credit or debit.');
   if (!body.amount || isNaN(Number(body.amount)) || Number(body.amount) <= 0)
     errors.push('Amount must be a positive number.');
   if (!body.description?.trim())
@@ -100,12 +110,13 @@ const createTransaction = async (req, res) => {
     }
 
     const amount = parseFloat(req.body.amount);
+    const type   = typeForCategory(req.body.category);
 
     if (isRequest) {
       await Transaction.create({
         client:           client._id,
         account:          account._id,
-        type:             req.body.type,
+        type,
         amount,
         description:      req.body.description.trim(),
         category:         req.body.category,
@@ -117,14 +128,14 @@ const createTransaction = async (req, res) => {
         approvalStatus:   'pending',
         requestedBy:      req.session.user.id,
       });
-      await logActivity(req, 'TXN_REQUEST', 'transaction', `Submitted ${req.body.category} request of ₵${amount.toFixed(2)} for ${client.name}`, { category: req.body.category, amount, type: req.body.type, clientName: client.name });
+      await logActivity(req, 'TXN_REQUEST', 'transaction', `Submitted ${req.body.category} request of ₵${amount.toFixed(2)} for ${client.name}`, { category: req.body.category, amount, type, clientName: client.name });
       req.session.flash = { type: 'success', message: 'Request submitted and is awaiting admin approval.' };
     } else {
-      const newBalance = parseFloat((account.balance + eff(req.body.type, amount)).toFixed(2));
+      const newBalance = parseFloat((account.balance + eff(type, amount)).toFixed(2));
       await Transaction.create({
         client:       client._id,
         account:      account._id,
-        type:         req.body.type,
+        type,
         amount,
         description:  req.body.description.trim(),
         category:     req.body.category,
@@ -135,9 +146,9 @@ const createTransaction = async (req, res) => {
       });
       account.balance = newBalance;
       await account.save();
-      await logActivity(req, 'TXN_CREATE', 'transaction', `Recorded ${req.body.category} of ₵${amount.toFixed(2)} for ${client.name}`, { category: req.body.category, amount, type: req.body.type, clientName: client.name });
+      await logActivity(req, 'TXN_CREATE', 'transaction', `Recorded ${req.body.category} of ₵${amount.toFixed(2)} for ${client.name}`, { category: req.body.category, amount, type, clientName: client.name });
       if (req.body.status === 'completed') {
-        notifyTransaction(client, { type: req.body.type, amount, category: req.body.category, balanceAfter: newBalance });
+        notifyTransaction(client, { type, amount, category: req.body.category, balanceAfter: newBalance });
       }
 
       req.session.flash = { type: 'success', message: 'Transaction recorded successfully.' };
@@ -234,7 +245,7 @@ const updateTransaction = async (req, res) => {
       txn.pendingEdit = {
         requestedBy: req.session.user.id,
         requestedAt: new Date(),
-        type:        req.body.type,
+        type:        typeForCategory(req.body.category),
         amount:      parseFloat(req.body.amount),
         description: req.body.description.trim(),
         category:    req.body.category,
@@ -258,9 +269,10 @@ const updateTransaction = async (req, res) => {
     }
 
     const newAmt = parseFloat(req.body.amount);
+    const type   = typeForCategory(req.body.category);
 
     if (isRequest) {
-      txn.type        = req.body.type;
+      txn.type        = type;
       txn.amount      = newAmt;
       txn.description = req.body.description.trim();
       txn.category    = req.body.category;
@@ -269,10 +281,10 @@ const updateTransaction = async (req, res) => {
       req.session.flash = { type: 'success', message: 'Request updated.' };
     } else {
       const oldEff = eff(txn.type, txn.amount);
-      const newEff = eff(req.body.type, newAmt);
+      const newEff = eff(type, newAmt);
       const delta  = newEff - oldEff;
 
-      txn.type         = req.body.type;
+      txn.type         = type;
       txn.amount       = newAmt;
       txn.description  = req.body.description.trim();
       txn.category     = req.body.category;

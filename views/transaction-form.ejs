@@ -11,26 +11,13 @@
   <link rel="stylesheet" href="/css/client.css">
   <link rel="stylesheet" href="/css/form.css">
   <style>
-    .type-toggle { display: flex; gap: 0; }
-    .type-toggle input[type="radio"] { display: none; }
-    .type-toggle label {
-      flex: 1; display: flex; align-items: center; justify-content: center;
-      gap: .4rem; padding: .7rem 1rem; border: 1.5px solid #e2e8f0;
-      font-size: .9rem; font-weight: 600; cursor: pointer;
-      transition: all .15s; background: #fff; color: #64748b;
+    .type-indicator {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .7rem 1rem; border: 1.5px solid; border-radius: .625rem;
+      font-size: .9rem; font-weight: 600;
     }
-    .type-toggle label:first-of-type  { border-radius: .625rem 0 0 .625rem; border-right-width: .75px; }
-    .type-toggle label:last-of-type   { border-radius: 0 .625rem .625rem 0; border-left-width: .75px; }
-    .type-toggle input[value="credit"]:checked + label {
-      background: #ecfdf5; border-color: #059669; color: #059669;
-      box-shadow: 0 0 0 3px rgba(5,150,105,.1);
-    }
-    .type-toggle input[value="debit"]:checked + label {
-      background: #fff1f2; border-color: #e11d48; color: #e11d48;
-      box-shadow: 0 0 0 3px rgba(225,29,72,.1);
-    }
-    .type-toggle label:hover { background: #f8fafc; }
-    .type-toggle input:checked + label:hover { background: inherit; }
+    .type-indicator.type-credit { background: #ecfdf5; border-color: #059669; color: #059669; }
+    .type-indicator.type-debit  { background: #fff1f2; border-color: #e11d48; color: #e11d48; }
 
     .request-notice {
       display: none;
@@ -54,9 +41,6 @@
   const val = (field, fallback = '') =>
     txn[field] !== undefined && txn[field] !== null ? txn[field] : fallback;
   const sel = (field, value) => String(val(field)) === String(value) ? 'selected' : '';
-
-  const txnType      = val('type', 'credit');
-  const txnCategory  = val('category', 'deposit');
 
   const isPendingRequest = isEdit && txn.requiresApproval && txn.approvalStatus === 'pending';
 
@@ -297,29 +281,6 @@
             </div>
             <div class="form-grid">
 
-              <!-- Type toggle -->
-              <div class="form-group form-col-full">
-                <label>Type <span class="req">*</span></label>
-                <div class="type-toggle">
-                  <input type="radio" id="type-credit" name="type" value="credit"
-                    <%= txnType === 'credit' ? 'checked' : '' %>>
-                  <label for="type-credit">
-                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
-                    </svg>
-                    Credit (Money In)
-                  </label>
-                  <input type="radio" id="type-debit" name="type" value="debit"
-                    <%= txnType === 'debit' ? 'checked' : '' %>>
-                  <label for="type-debit">
-                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
-                    </svg>
-                    Debit (Money Out)
-                  </label>
-                </div>
-              </div>
-
               <!-- Amount -->
               <div class="form-group">
                 <label for="amount">Amount <span class="req">*</span></label>
@@ -354,6 +315,12 @@
                     <path d="M6 9l6 6 6-6"/>
                   </svg>
                 </div>
+              </div>
+
+              <!-- Type (auto-detected from category) -->
+              <div class="form-group form-col-full">
+                <label>Type</label>
+                <div class="type-indicator" id="typeIndicator"></div>
               </div>
 
               <!-- Description -->
@@ -451,6 +418,27 @@
       );
     }
   }
+
+  var CATEGORY_TYPE = {
+    deposit: 'credit', payment: 'credit', interest: 'credit',
+    withdrawal: 'debit', loan: 'debit', transfer: 'debit', fee: 'debit',
+  };
+  var CREDIT_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>';
+  var DEBIT_ICON  = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>';
+
+  function updateTypeIndicator() {
+    var categoryEl = document.getElementById('category');
+    var indicator  = document.getElementById('typeIndicator');
+    if (!categoryEl || !indicator) return;
+    var isCredit = CATEGORY_TYPE[categoryEl.value] === 'credit';
+    indicator.className = 'type-indicator ' + (isCredit ? 'type-credit' : 'type-debit');
+    indicator.innerHTML = (isCredit ? CREDIT_ICON : DEBIT_ICON)
+      + (isCredit ? 'Money In (Credit)' : 'Money Out (Debit)')
+      + '<span style="font-weight:500;margin-left:auto;font-size:.8rem;opacity:.75">auto-detected from category</span>';
+  }
+
+  document.getElementById('category').addEventListener('change', updateTypeIndicator);
+  updateTypeIndicator();
 </script>
       </div>
     </div>
